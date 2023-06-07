@@ -1,3 +1,4 @@
+# Author: [Handi Zhao/hdzhao]
 from gensim.models import Word2Vec
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
