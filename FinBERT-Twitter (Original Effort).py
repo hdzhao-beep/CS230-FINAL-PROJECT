@@ -119,7 +119,7 @@ class FIN_twitterSentimentClassifier():
 
 # Create an instance of the FIN_twitterSentimentClassifier
 ts_new = FIN_twitterSentimentClassifier()
-
+df_train = pd.concat([df_train, financial_phrase_bank_data], ignore_index=True)
 # Import the preprocessed tweets (df_train)
 ts_new.import_tweets(df_train)
 
