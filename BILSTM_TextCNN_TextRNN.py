@@ -7,7 +7,11 @@ from tensorflow.keras.callbacks import ReduceLROnPlateau, EarlyStopping
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 import numpy as np
 import matplotlib.pyplot as plt
+import pickle
 
+# Load the preprocessed variables from the pickle file
+with open('preprocessed_data.pickle', 'rb') as f:
+    X, y, X_test, y_test, df_train, df_test = pickle.load(f)
 # Word2Vec training
 Embedding_dimensions = 100
 
