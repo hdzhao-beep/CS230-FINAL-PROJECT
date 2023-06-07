@@ -1,3 +1,4 @@
+# Author: [Handi Zhao/hdzhao]
 import pickle
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
