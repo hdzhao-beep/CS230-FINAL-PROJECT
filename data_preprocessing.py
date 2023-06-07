@@ -15,76 +15,46 @@ nltk.download('punkt')
 nltk.download('stopwords')
 nltk.download('wordnet')
 
-# Import the Twitter data
 def import_tweets(path):
-    # Read the CSV file
-    df1 = pd.read_csv(path, encoding='latin-1')
+    df = pd.read_csv(path, encoding='latin-1')
+    df = df.dropna(subset=['label'])
+    df["text"] = df["text"].astype(str)
+    df = df[df['label'] != 0.0]
+    df.loc[df['label'] == 1.0, 'label'] = 1
+    df.loc[df['label'] == -1.0, 'label'] = 0
+    df['label'] = df['label'].astype(int)
+    df = df.head(10000)
+    return df
 
-    # Drop rows with missing label values
-    df1 = df1.dropna(subset=['label'])
-
-    # Convert the 'text' column to string type
-    df1["text"] = df1["text"].astype(str)
-
-    # Remove rows with label value 0.0
-    df1 = df1[df1['label'] != 0.0]
-
-    # Map label values to 0 and 1
-    df1.loc[df1['label'] == 1.0, 'label'] = 1
-    df1.loc[df1['label'] == -1.0, 'label'] = 0
-
-    # Convert the 'label' column to int type
-    df1['label'] = df1['label'].astype(int)
-
-    # Select the first 10,000 rows
-    df1 = df1.head(10000)
-
-    return df1
-
-# Data preprocessing and cleaning
-DATASET_COLUMNS = ['target','ids','date','flag','user','text']
-df = pd.read_csv("training.1600000.processed.noemoticon.csv", encoding="latin", header=None, names=DATASET_COLUMNS)
-df_test = import_tweets("test.csv")
-
-# Create the dataset
-dataset = df[['text', 'target']]
-dataset['target'] = dataset['target'].replace(4, 1)
-dataset_test = df_test[['text', 'target']]
-dataset['text'] = dataset['text'].str.lower()
-dataset_test['text'] = dataset_test['text'].str.lower()
-
-stopwords = stopwords.words('english')
-
-# Clean stopwords
 def clean_stopwords(text):
+    stopwords = ['a', 'about', 'above', 'after', 'again', 'ain', 'all', 'am', 'an',
+                 'and', 'any', 'are', 'as', 'at', 'be', 'because', 'been', 'before',
+                 'being', 'below', 'between', 'both', 'by', 'can', 'd', 'did', 'do',
+                 'does', 'doing', 'down', 'during', 'each', 'few', 'for', 'from',
+                 'further', 'had', 'has', 'have', 'having', 'he', 'her', 'here',
+                 'hers', 'herself', 'him', 'himself', 'his', 'how', 'i', 'if', 'in',
+                 'into', 'is', 'it', 'its', 'itself', 'just', 'll', 'm', 'ma',
+                 'me', 'more', 'most', 'my', 'myself', 'now', 'o', 'of', 'on', 'once',
+                 'only', 'or', 'other', 'our', 'ours', 'ourselves', 'out', 'own', 're', 's',
+                 'same', 'she', "shes", 'should', "shouldve", 'so', 'some', 'such',
+                 't', 'than', 'that', "thatll", 'the', 'their', 'theirs', 'them',
+                 'themselves', 'then', 'there', 'these', 'they', 'this', 'those',
+                 'through', 'to', 'too', 'under', 'until', 'up', 've', 'very', 'was',
+                 'we', 'were', 'what', 'when', 'where', 'which', 'while', 'who', 'whom',
+                 'why', 'will', 'with', 'won', 'y', 'you', "youd", "youll", "youre",
+                 "youve", 'your', 'yours', 'yourself', 'yourselves']
     return " ".join([word for word in str(text).split() if word not in set(stopwords)])
 
-dataset['text'] = dataset['text'].apply(lambda text: clean_stopwords(text))
-dataset_test['text'] = dataset_test['text'].apply(lambda text: clean_stopwords(text))
-
-# Clean username mentions
 def clean_username(data):
-    return re.sub('@[^\s]+',' ', data)
+    return re.sub('@[^\s]+', ' ', data)
 
-dataset['text'] = dataset['text'].apply(lambda x: clean_username(x))
-dataset_test['text'] = dataset_test['text'].apply(lambda x: clean_username(x))
-
-# Clean URLs
 def clean_url(data):
     data = re.sub(r"((https|http|ftp)?(:\/\/)?(www\.)?)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)", ' ', data)
     return re.sub(r'/', ' / ', data)
 
-dataset['text'] = dataset['text'].apply(lambda x: clean_url(x))
-dataset_test['text'] = dataset_test['text'].apply(lambda x: clean_url(x))
-
-# Clean repeating characters
 def clean_repeating_char(text):
     return re.sub(r"(.)\1\1+", r"\1\1", text)
 
-dataset['text'] = dataset['text'].apply(lambda x: clean_repeating_char(x))
-dataset_test['text'] = dataset_test['text'].apply(lambda x: clean_repeating_char(x))
-
-# Clean emojis
 def clean_emoji(data):
     data = re.sub(r'<3', '<heart>', data)
     data = re.sub(r"[8:=;]['`\-]?[)d]+", '<smile>', data)
@@ -93,44 +63,61 @@ def clean_emoji(data):
     data = re.sub(r"[8:=;]['`\-]?p+", '<laugh>', data)
     return data
 
-dataset['text'] = dataset['text'].apply(lambda x: clean_emoji(x))
-dataset_test['text'] = dataset_test['text'].apply(lambda x: clean_emoji(x))
-
-# Clean numbers
 def clean_numbers(data):
     return re.sub('[0-9]+', '', data)
+
+def clean_punctuations(text):
+    return text.translate(str.maketrans('', '', string.punctuation))
+
+def clean_nonalpha(data):
+    return re.sub("[^a-z0-9<>]", ' ', data)
+
+def stem_text(data):
+    return [nltk.stem.snowball.SnowballStemmer(language='english').stem(word) for word in data]
+
+def lemmatize_text(data):
+    return [WordNetLemmatizer().lemmatize(word) for word in data]
+
+
+DATASET_COLUMNS = ['target', 'ids', 'date', 'flag', 'user', 'text']
+df = pd.read_csv("training.1600000.processed.noemoticon.csv", encoding="latin", header=None, names=DATASET_COLUMNS)
+df_test = import_tweets("test.csv")
+
+dataset = df[['text', 'target']]
+dataset['target'] = dataset['target'].replace(4, 1)
+
+dataset_test = df_test[['text', 'target']]
+dataset_test['text'] = dataset_test['text'].str.lower()
+
+dataset['text'] = dataset['text'].apply(lambda text: clean_stopwords(text))
+dataset_test['text'] = dataset_test['text'].apply(lambda text: clean_stopwords(text))
+
+dataset['text'] = dataset['text'].apply(lambda x: clean_username(x))
+dataset_test['text'] = dataset_test['text'].apply(lambda x: clean_username(x))
+
+dataset['text'] = dataset['text'].apply(lambda x: clean_url(x))
+dataset_test['text'] = dataset_test['text'].apply(lambda x: clean_url(x))
+
+dataset['text'] = dataset['text'].apply(lambda x: clean_repeating_char(x))
+dataset_test['text'] = dataset_test['text'].apply(lambda x: clean_repeating_char(x))
+
+dataset['text'] = dataset['text'].apply(lambda x: clean_emoji(x))
+dataset_test['text'] = dataset_test['text'].apply(lambda x: clean_emoji(x))
 
 dataset['text'] = dataset['text'].apply(lambda x: clean_numbers(x))
 dataset_test['text'] = dataset_test['text'].apply(lambda x: clean_numbers(x))
 
-# Clean punctuations
-def clean_punctuations(text):
-    return text.translate(str.maketrans('', '', string.punctuation))
-
 dataset['text'] = dataset['text'].apply(lambda x: clean_punctuations(x))
 dataset_test['text'] = dataset_test['text'].apply(lambda x: clean_punctuations(x))
-
-# Clean non-alphabetic characters
-def clean_nonalpha(data):
-    return re.sub("[^a-z0-9<>]", ' ', data)
 
 dataset['text'] = dataset['text'].apply(lambda x: clean_nonalpha(x))
 dataset_test['text'] = dataset_test['text'].apply(lambda x: clean_nonalpha(x))
 
-# Tokenize text
 dataset['text'] = dataset['text'].apply(RegexpTokenizer(r'\w+').tokenize)
 dataset_test['text'] = dataset_test['text'].apply(RegexpTokenizer(r'\w+').tokenize)
 
-# Stemming
-def stem_text(data):
-    return [nltk.stem.snowball.SnowballStemmer(language='english').stem(word) for word in data]
-
 dataset['text'] = dataset['text'].apply(lambda x: stem_text(x))
 dataset_test['text'] = dataset_test['text'].apply(lambda x: stem_text(x))
-
-# Lemmatization
-def lemmatize_text(data):
-    return [WordNetLemmatizer().lemmatize(word) for word in data]
 
 dataset['text'] = dataset['text'].apply(lambda x: lemmatize_text(x))
 dataset_test['text'] = dataset_test['text'].apply(lambda x: lemmatize_text(x))
