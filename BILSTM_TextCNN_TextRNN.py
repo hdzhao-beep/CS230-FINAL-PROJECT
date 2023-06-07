@@ -12,31 +12,6 @@ import pickle
 # Load the preprocessed variables from the pickle file
 with open('preprocessed_data.pickle', 'rb') as f:
     X, y, X_test, y_test, df_train, df_test = pickle.load(f)
-# Word2Vec training
-Embedding_dimensions = 100
-
-Word2vec_train_data = list(map(lambda x: x.split(), X_train))
-
-word2vec_model = Word2Vec(Word2vec_train_data,
-                          vector_size=Embedding_dimensions,
-                          workers=8,
-                          min_count=5)
-
-# Tokenization
-vocab_length = 60000
-tokenizer = Tokenizer(filters="", lower=False, oov_token="<oov>")
-tokenizer.fit_on_texts(X)
-tokenizer.num_words = vocab_length
-
-X_train = pad_sequences(tokenizer.texts_to_sequences(X_train), maxlen=input_length)
-X_test = pad_sequences(tokenizer.texts_to_sequences(X_test), maxlen=input_length)
-
-# Embedding Matrix
-embedding_matrix = np.zeros((vocab_length, Embedding_dimensions))
-
-for word, token in tokenizer.word_index.items():
-    if word2vec_model.wv.__contains__(word):
-        embedding_matrix[token] = word2vec_model.wv.__getitem__(word)
 
 # BiLSTM Model
 def getModel():
